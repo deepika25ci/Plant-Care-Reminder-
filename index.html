@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Care Reminder</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f7ef;
+            margin: 0;
+            padding: 20px;
+            color: #23452d;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 20px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px #0001;
+        }
+
+        h1 {
+            text-align: center;
+            color: #26733c;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #667766;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 7px;
+            font-size: 16px;
+        }
+
+        input {
+            border: 1px solid #b7cbb9;
+        }
+
+        button {
+            border: none;
+            background: #31834a;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #246638;
+        }
+
+        .plant-card {
+            background: #f3f9f1;
+            border-left: 5px solid #31834a;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+        }
+
+        .plant-card h3 {
+            margin: 0 0 10px;
+        }
+
+        .status {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .watered {
+            background: #2379bd;
+        }
+
+        .delete {
+            background: #d94b4b;
+        }
+
+        .empty {
+            text-align: center;
+            color: #777;
+            margin-top: 25px;
+        }
+
+        .message {
+            text-align: center;
+            color: #26733c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🌱 Plant Care Reminder</h1>
+        <p class="subtitle">
+            Take care of your plants, one day at a time!
+        </p>
+
+        <form id="plantForm">
+            <label for="plantName">Plant Name</label>
+            <input
+                type="text"
+                id="plantName"
+                placeholder="Example: Rose"
+                required
+            >
+
+            <label for="waterDate">Next Watering Date</label>
+            <input type="date" id="waterDate" required>
+
+            <button type="submit">+ Add Plant</button>
+        </form>
+
+        <h2>🌿 My Plants</h2>
+        <p id="plantCount">Total plants: 0</p>
+        <div id="plantList"></div>
+        <p id="message" class="message"></p>
+    </div>
+
+    <script>
+        const form = document.getElementById("plantForm");
+        const plantName = document.getElementById("plantName");
+        const waterDate = document.getElementById("waterDate");
+        const plantList = document.getElementById("plantList");
+        const plantCount = document.getElementById("plantCount");
+        const message = document.getElementById("message");
+
+        let plants = JSON.parse(
+            localStorage.getItem("plants") || "[]"
+        );
+
+        // Set today's date as the minimum date
+        const today = new Date();
+        const todayString =
+            today.getFullYear() + "-" +
+            String(today.getMonth() + 1).padStart(2, "0") + "-" +
+            String(today.getDate()).padStart(2, "0");
+
+        waterDate.min = todayString;
+
+        // Save plants in browser storage
+        function savePlants() {
+            localStorage.setItem("plants", JSON.stringify(plants));
+        }
+
+        // Find the watering status
+        function getStatus(date) {
+            if (date < todayString) {
+                return "⚠️ Watering overdue!";
+            }
+
+            if (date === todayString) {
+                return "💧 Water today!";
+            }
+
+            return "🌿 Upcoming watering";
+        }
+
+        // Display all plants
+        function displayPlants() {
+            plantList.innerHTML = "";
+            plantCount.textContent =
+                "Total plants: " + plants.length;
+
+            if (plants.length === 0) {
+                plantList.innerHTML =
+                    '<p class="empty">No plants added yet. Add your first plant!</p>';
+                return;
+            }
+
+            plants.forEach(function(plant, index) {
+                const card = document.createElement("div");
+                card.className = "plant-card";
+
+                const heading = document.createElement("h3");
+                heading.textContent = "🪴 " + plant.name;
+
+                const dateText = document.createElement("p");
+                dateText.textContent =
+                    "Next watering: " + plant.date;
+
+                const status = document.createElement("p");
+                status.className = "status";
+                status.textContent = plant.watered
+                    ? "✅ Watered today"
+                    : getStatus(plant.date);
+
+                const waterButton = document.createElement("button");
+                waterButton.textContent = "Mark as Watered";
+                waterButton.className = "watered";
+
+                waterButton.addEventListener("click", function() {
+                    plants[index].watered = true;
+                    plants[index].date = todayString;
+                    savePlants();
+                    displayPlants();
+                    message.textContent =
+                        plant.name + " marked as watered!";
+                });
+
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "Delete Plant";
+                deleteButton.className = "delete";
+
+                deleteButton.addEventListener("click", function() {
+                    plants.splice(index, 1);
+                    savePlants();
+                    displayPlants();
+                    message.textContent = "Plant deleted.";
+                });
+
+                card.appendChild(heading);
+                card.appendChild(dateText);
+                card.appendChild(status);
+                card.appendChild(waterButton);
+                card.appendChild(deleteButton);
+
+                plantList.appendChild(card);
+            });
+        }
+
+        // Add a new plant
+        form.addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            if (waterDate.value < todayString) {
+                message.textContent =
+                    "Please select today or a future date.";
+                return;
+            }
+
+            plants.push({
+                name: plantName.value.trim(),
+                date: waterDate.value,
+                watered: false
+            });
+
+            savePlants();
+            displayPlants();
+            form.reset();
+            waterDate.min = todayString;
+
+            message.textContent = "Plant added successfully!";
+        });
+
+        // Load saved plants when opening the page
+        displayPlants();
+    </script>
+</body>
+</html>
+
